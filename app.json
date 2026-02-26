@@ -7,7 +7,7 @@
     "icon": "./assets/images/logo.png",
     "scheme": "kisanx",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true
     },
@@ -43,6 +43,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b520b927-2196-45f0-a78a-73ef1ed53ca4"
+      }
     }
   }
 }
