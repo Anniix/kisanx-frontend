@@ -63,6 +63,7 @@ export default function LoginScreen() {
         <View style={styles.inputGroup}>
           <TextInput 
             placeholder="Email" 
+            placeholderTextColor="#64748B"
             value={email} 
             onChangeText={setEmail} 
             style={styles.input} 
@@ -70,6 +71,7 @@ export default function LoginScreen() {
           />
           <TextInput 
             placeholder="Password" 
+            placeholderTextColor="#64748B"
             value={password} 
             onChangeText={setPassword} 
             style={styles.input} 

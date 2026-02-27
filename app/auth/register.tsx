@@ -180,6 +180,7 @@ export default function Register() {
                 {focusedField === "email" && <Ionicons name="mail" size={20} color="#10B981" style={styles.icon} />}
                 <TextInput 
                   placeholder="Email Address" 
+                  placeholderTextColor="#64748B"
                   style={styles.input} 
                   editable={!isVerified} 
                   onFocus={()=>setFocusedField("email")} 
@@ -200,6 +201,7 @@ export default function Register() {
                 <View style={[styles.inputWrapper, {borderColor: '#10B981'}]}>
                   <TextInput 
                     placeholder="Enter 6-digit OTP" 
+                    placeholderTextColor="#64748B"
                     style={styles.input} 
                     keyboardType="numeric" 
                     onChangeText={setOtp} 

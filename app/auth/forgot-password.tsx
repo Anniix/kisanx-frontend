@@ -148,6 +148,7 @@ export default function ForgotPassword() {
                 <Ionicons name="keypad-outline" size={20} color="#16A34A" style={styles.icon} />
                 <TextInput
                   placeholder="6-Digit OTP"
+                  placeholderTextColor="#64748B"
                   value={form.otp}
                   onChangeText={(text) => setForm({ ...form, otp: text })}
                   style={styles.input}
@@ -157,11 +158,11 @@ export default function ForgotPassword() {
               </View>
               <View style={styles.inputWrapper}>
                 <Ionicons name="lock-closed-outline" size={20} color="#16A34A" style={styles.icon} />
-                <TextInput placeholder="New Password" value={form.newPassword} onChangeText={(text) => setForm({ ...form, newPassword: text })} style={styles.input} secureTextEntry />
+                <TextInput placeholder="New Password" placeholderTextColor="#64748B" value={form.newPassword} onChangeText={(text) => setForm({ ...form, newPassword: text })} style={styles.input} secureTextEntry />
               </View>
               <View style={styles.inputWrapper}>
                 <Ionicons name="shield-checkmark-outline" size={20} color="#16A34A" style={styles.icon} />
-                <TextInput placeholder="Confirm Password" value={form.confirmPassword} onChangeText={(text) => setForm({ ...form, confirmPassword: text })} style={styles.input} secureTextEntry />
+                <TextInput placeholder="Confirm Password" placeholderTextColor="#64748B" value={form.confirmPassword} onChangeText={(text) => setForm({ ...form, confirmPassword: text })} style={styles.input} secureTextEntry />
               </View>
               <TouchableOpacity style={styles.mainBtn} onPress={handleResetPassword} disabled={loading}>
                 {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Update Password</Text>}
