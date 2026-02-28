@@ -149,11 +149,12 @@ export default function CheckoutScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Delivery Address</Text>
+          <Text style={styles.sectionTitle }>Delivery Address</Text>
           <View style={styles.inputContainer}>
             <TextInput 
               style={styles.input} 
               placeholder="House No, Street..." 
+              placeholderTextColor="#64748B"
               multiline 
               value={address} 
               onChangeText={setAddress} 

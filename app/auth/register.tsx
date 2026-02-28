@@ -12,23 +12,23 @@ import {
   ActivityIndicator,
   Animated,
   Image,
+  Dimensions,
+  StatusBar,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { saveToken } from "../../utils/auth";
 import { API_URL } from "../../utils/api";
 
+const { width } = Dimensions.get("window");
 const API_BASE = `${API_URL}/auth`;
-
-type Role = "farmer" | "customer";
 
 export default function Register() {
   const router = useRouter();
-  const [role, setRole] = useState<Role>("customer");
+  const [role, setRole] = useState<"farmer" | "customer">("customer");
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   
-  // OTP States
   const [otpSent, setOtpSent] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [otp, setOtp] = useState("");
@@ -44,26 +44,18 @@ export default function Register() {
   }, []);
 
   const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    password: "",
-    confirmPassword: "",
-    farmName: "",
-    location: "",
-    address: "",
+    firstName: "", lastName: "", email: "", phone: "",
+    password: "", confirmPassword: "", farmName: "",
+    location: "", address: "",
   });
 
   const update = (key: string, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  // 📧 Logic to Send OTP
   const handleSendOTP = async () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(form.email)) return Alert.alert("Error", "Please enter a valid email.");
-
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/send-registration-otp`, {
@@ -71,23 +63,22 @@ export default function Register() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: form.email }),
       });
-      const data = await res.json();
-      if (res.ok) {
-        setOtpSent(true);
-        Alert.alert("OTP Sent", "Verification code sent to your email.");
-      } else {
-        Alert.alert("Error", data.message);
+      if (res.ok) { 
+        setOtpSent(true); 
+        Alert.alert("OTP Sent", "Code sent to email."); 
+      } else { 
+        const data = await res.json(); 
+        Alert.alert("Error", data.message || "Failed to send OTP"); 
       }
-    } catch (err) {
-      Alert.alert("Error", "Server connection failed.");
-    } finally {
-      setLoading(false);
+    } catch (err) { 
+      Alert.alert("Error", "Server connection failed."); 
+    } finally { 
+      setLoading(false); 
     }
   };
 
-  // ✅ Logic to Verify OTP
   const handleVerifyOTP = async () => {
-    if (otp.length < 6) return Alert.alert("Error", "Enter 6-digit OTP.");
+    if (!otp || otp.length < 6) return Alert.alert("Error", "Enter 6-digit OTP");
     try {
       const res = await fetch(`${API_BASE}/verify-registration-otp`, {
         method: "POST",
@@ -95,154 +86,145 @@ export default function Register() {
         body: JSON.stringify({ email: form.email, otp }),
       });
       const data = await res.json();
-      if (data.success) {
-        setIsVerified(true);
-        Alert.alert("Success", "Email verified successfully! ✅");
-      } else {
-        Alert.alert("Wrong OTP", "Aapne galat OTP dala hai.");
+      if (data.success) { 
+        setIsVerified(true); 
+        Alert.alert("Success", "Email verified!"); 
+      } else { 
+        Alert.alert("Wrong OTP", data.message || "Check and try again."); 
       }
-    } catch (err) {
-      Alert.alert("Error", "Verification failed.");
+    } catch (err) { 
+      Alert.alert("Error", "Failed to verify."); 
     }
   };
 
   const handleRegister = async () => {
-    if (!isVerified) return Alert.alert("Required", "Please verify your email first.");
-    if (!form.firstName || !form.password) return Alert.alert("Required", "Fill all fields.");
+    if (!isVerified) return Alert.alert("Required", "Please verify email first.");
 
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!passwordRegex.test(form.password)) {
-      return Alert.alert("Weak Password", "Use 8+ characters with uppercase, a number, and a symbol.");
+    if (!form.firstName || !form.lastName || !form.phone || !form.password) {
+      return Alert.alert("Error", "Please fill all required fields.");
     }
 
     if (form.password !== form.confirmPassword) {
-      return Alert.alert("Error", "Passwords do not match");
+      return Alert.alert("Error", "Passwords do not match.");
     }
 
     setLoading(true);
     try {
-      const payload: any = { ...form, role, isVerified: true };
       const res = await fetch(`${API_BASE}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...form, role, isVerified: true }),
       });
-
-      const data = await res.json();
-      if (!res.ok) return Alert.alert("Error", data.message);
-
-      if (data.token) await saveToken(data.token);
       
-      Alert.alert("Success 🎉", "Account ready!", [
-        { text: "Go", onPress: () => router.replace(role === "farmer" ? "/farmer/dashboard" : "/customer/(tabs)") }
-      ]);
-    } catch (err) {
-      Alert.alert("Error", "Server failed.");
-    } finally {
-      setLoading(false);
+      const data = await res.json();
+      
+      if (!res.ok) {
+        // ✨ UPDATED: Ab generic message nahi, asli vajah dikhayega
+        return Alert.alert("Registration Error", data.message || "Failed to create account");
+      }
+
+      if (data.token) {
+        await saveToken(data.token);
+        Alert.alert("Success", "Account created successfully!");
+        router.replace(role === "farmer" ? "/farmer/dashboard" : "/customer/(tabs)");
+      }
+    } catch (err) { 
+      Alert.alert("Error", "Network error. Please check your connection."); 
+    } finally { 
+      setLoading(false); 
     }
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-          
-          <View style={styles.logoWrapper}>
-            <View style={styles.logoCircle}>
-              <Image source={require("../../assets/images/logo.png")} style={styles.logoImg} />
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <View style={styles.headerSection}>
-              <Text style={styles.title}>Join KisanX</Text>
-              <Text style={styles.subtitle}>Fresh farm products at your doorstep</Text>
-            </View>
-
-            <View style={styles.roleContainer}>
-              <TouchableOpacity style={[styles.roleCard, role === "customer" && styles.activeRole]} onPress={() => setRole("customer")}>
-                <Ionicons name="cart" size={18} color={role === "customer" ? "#fff" : "#10B981"} />
-                <Text style={[styles.roleText, role === "customer" && styles.activeRoleText]}>Customer</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.roleCard, role === "farmer" && styles.activeRole]} onPress={() => setRole("farmer")}>
-                <Ionicons name="bus" size={18} color={role === "farmer" ? "#fff" : "#10B981"} />
-                <Text style={[styles.roleText, role === "farmer" && styles.activeRoleText]}>Farmer</Text>
-              </TouchableOpacity>
+    <View style={styles.mainContainer}>
+      <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : undefined} 
+        style={{ flex: 1 }}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+          <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], width: '100%' }}>
+            
+            <View style={styles.logoWrapper}>
+              <View style={styles.logoCircle}>
+                <Image source={require("../../assets/images/logo.png")} style={styles.logoImg} />
+              </View>
             </View>
 
-            <View style={styles.formContainer}>
-              <Input icon="person" placeholder="First Name" fieldName="firstName" onFocus={setFocusedField} focusedField={focusedField} onChange={(t:any)=>update("firstName",t)} />
-              <Input icon="person" placeholder="Last Name" fieldName="lastName" onFocus={setFocusedField} focusedField={focusedField} onChange={(t:any)=>update("lastName",t)} />
-              
-              {/* ✨ EMAIL FIELD WITH VERIFICATION ACTION */}
-              <View style={[styles.inputWrapper, focusedField === "email" && styles.focusedInput]}>
-                {focusedField === "email" && <Ionicons name="mail" size={20} color="#10B981" style={styles.icon} />}
-                <TextInput 
-                  placeholder="Email Address" 
-                  placeholderTextColor="#64748B"
-                  style={styles.input} 
-                  editable={!isVerified} 
-                  onFocus={()=>setFocusedField("email")} 
-                  onBlur={()=>setFocusedField(null)}
-                  onChangeText={(t)=>update("email",t)} 
-                />
-                {isVerified ? (
-                  <Ionicons name="checkmark-circle" size={24} color="#10B981" style={{marginRight: 15}} />
+            <View style={styles.card}>
+              <View style={styles.headerSection}>
+                <Text style={styles.title}>Join KisanX</Text>
+              </View>
+
+              <View style={styles.roleContainer}>
+                <TouchableOpacity style={[styles.roleCard, role === "customer" && styles.activeRole]} onPress={() => setRole("customer")}>
+                  <Ionicons name="cart" size={18} color={role === "customer" ? "#fff" : "#10B981"} />
+                  <Text style={[styles.roleText, role === "customer" && styles.activeRoleText]}>Customer</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.roleCard, role === "farmer" && styles.activeRole]} onPress={() => setRole("farmer")}>
+                  <Ionicons name="bus" size={18} color={role === "farmer" ? "#fff" : "#10B981"} />
+                  <Text style={[styles.roleText, role === "farmer" && styles.activeRoleText]}>Farmer</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.formContainer}>
+                <Input icon="person" placeholder="First Name" fieldName="firstName" onFocus={setFocusedField} focusedField={focusedField} onChange={(t:any)=>update("firstName",t)} />
+                <Input icon="person" placeholder="Last Name" fieldName="lastName" onFocus={setFocusedField} focusedField={focusedField} onChange={(t:any)=>update("lastName",t)} />
+                
+                <View style={[styles.inputWrapper, focusedField === "email" && styles.focusedInput]}>
+                  <Ionicons name="mail" size={20} color={focusedField === "email" ? "#10B981" : "#94A3B8"} style={styles.icon} />
+                  <TextInput 
+                    placeholder="Email Address" 
+                    placeholderTextColor="#94A3B8"
+                    style={styles.input} 
+                    editable={!isVerified} 
+                    onChangeText={(t)=>update("email",t)} 
+                    autoCapitalize="none"
+                  />
+                  {!isVerified && (
+                    <TouchableOpacity style={styles.verifyBtn} onPress={handleSendOTP} disabled={loading}>
+                      <Text style={styles.verifyBtnText}>{otpSent ? "Resend" : "Get OTP"}</Text>
+                    </TouchableOpacity>
+                  )}
+                  {isVerified && <Ionicons name="checkmark-circle" size={24} color="#10B981" style={{marginRight: 10}} />}
+                </View>
+
+                {otpSent && !isVerified && (
+                  <View style={[styles.inputWrapper, {borderColor: '#10B981'}]}>
+                    <Ionicons name="keypad" size={20} color="#10B981" style={styles.icon} />
+                    <TextInput placeholder="Enter OTP" style={styles.input} keyboardType="numeric" onChangeText={setOtp} maxLength={6} />
+                    <TouchableOpacity style={styles.verifyBtn} onPress={handleVerifyOTP}><Text style={styles.verifyBtnText}>Verify</Text></TouchableOpacity>
+                  </View>
+                )}
+
+                <Input icon="call" placeholder="Phone Number" fieldName="phone" onFocus={setFocusedField} focusedField={focusedField} keyboardType="numeric" onChange={(t:any)=>update("phone",t)} />
+                <Input icon="lock-closed" placeholder="Password" fieldName="password" onFocus={setFocusedField} focusedField={focusedField} secure onChange={(t:any)=>update("password",t)} />
+                <Input icon="shield-checkmark" placeholder="Confirm Password" fieldName="confirmPassword" onFocus={setFocusedField} focusedField={focusedField} secure onChange={(t:any)=>update("confirmPassword",t)} />
+                
+                {role === "farmer" ? (
+                  <>
+                    <Input icon="business" placeholder="Farm Name" fieldName="farmName" onFocus={setFocusedField} focusedField={focusedField} onChange={(t:any)=>update("farmName",t)} />
+                    <Input icon="location" placeholder="Location" fieldName="location" onFocus={setFocusedField} focusedField={focusedField} onChange={(t:any)=>update("location",t)} />
+                  </>
                 ) : (
-                  <TouchableOpacity style={styles.verifyBtn} onPress={handleSendOTP} disabled={loading}>
-                    <Text style={styles.verifyBtnText}>{otpSent ? "Resend" : "Get OTP"}</Text>
-                  </TouchableOpacity>
+                  <Input icon="home" placeholder="Address" fieldName="address" onFocus={setFocusedField} focusedField={focusedField} onChange={(t:any)=>update("address",t)} />
                 )}
               </View>
 
-              {/* ✨ OTP INPUT BOX (Appears after Get OTP) */}
-              {otpSent && !isVerified && (
-                <View style={[styles.inputWrapper, {borderColor: '#10B981'}]}>
-                  <TextInput 
-                    placeholder="Enter 6-digit OTP" 
-                    placeholderTextColor="#64748B"
-                    style={styles.input} 
-                    keyboardType="numeric" 
-                    onChangeText={setOtp} 
-                  />
-                  <TouchableOpacity style={styles.verifyBtn} onPress={handleVerifyOTP}>
-                    <Text style={styles.verifyBtnText}>Verify</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              <Input icon="call" placeholder="Phone Number" fieldName="phone" onFocus={setFocusedField} focusedField={focusedField} keyboardType="numeric" onChange={(t:any)=>update("phone",t)} />
-              <Input icon="lock-closed" placeholder="Password" fieldName="password" onFocus={setFocusedField} focusedField={focusedField} secure onChange={(t:any)=>update("password",t)} />
-              <Input icon="shield-checkmark" placeholder="Confirm Password" fieldName="confirmPassword" onFocus={setFocusedField} focusedField={focusedField} secure onChange={(t:any)=>update("confirmPassword",t)} />
-
-              {role === "farmer" ? (
-                <>
-                  <Input icon="business" placeholder="Farm Name" fieldName="farmName" onFocus={setFocusedField} focusedField={focusedField} onChange={(t:any)=>update("farmName",t)} />
-                  <Input icon="location" placeholder="Farm Location" fieldName="location" onFocus={setFocusedField} focusedField={focusedField} onChange={(t:any)=>update("location",t)} />
-                </>
-              ) : (
-                <Input icon="home" placeholder="Delivery Address" fieldName="address" onFocus={setFocusedField} focusedField={focusedField} onChange={(t:any)=>update("address",t)} />
-              )}
+              <TouchableOpacity style={styles.submitBtn} onPress={handleRegister} disabled={loading}>
+                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>Create Account</Text>}
+              </TouchableOpacity>
             </View>
-
-            <TouchableOpacity style={styles.submitBtn} onPress={handleRegister} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>Create Account</Text>}
-            </TouchableOpacity>
-            
-            <TouchableOpacity onPress={() => router.push("/auth/login")} style={styles.footerLink}>
-              <Text style={styles.footerText}>Already have an account? <Text style={styles.loginText}>Login</Text></Text>
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          </Animated.View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const Input = ({ icon, placeholder, secure, onChange, keyboardType, fieldName, onFocus, focusedField }: any) => (
   <View style={[styles.inputWrapper, focusedField === fieldName && styles.focusedInput]}>
-    {focusedField === fieldName && <Ionicons name={icon} size={20} color="#10B981" style={styles.icon} />}
+    <Ionicons name={icon} size={20} color={focusedField === fieldName ? "#10B981" : "#94A3B8"} style={styles.icon} />
     <TextInput
       placeholder={placeholder}
       secureTextEntry={secure}
@@ -258,30 +240,26 @@ const Input = ({ icon, placeholder, secure, onChange, keyboardType, fieldName, o
 );
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F0FDF4" },
-  scrollContainer: { padding: 25, paddingBottom: 60, flexGrow: 1, justifyContent: 'center' },
+  mainContainer: { flex: 1, backgroundColor: "#F0FDF4" },
+  scrollContainer: { paddingHorizontal: 20, paddingBottom: 40, flexGrow: 1, paddingTop: 60 },
   logoWrapper: { alignItems: 'center', marginBottom: 20 },
-  logoCircle: { width: 90, height: 90, backgroundColor: "#fff", borderRadius: 45, elevation: 10, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
-  logoImg: { width: '100%', height: '100%' },
+  logoCircle: { width: 90, height: 90, backgroundColor: "#fff", borderRadius: 45, elevation: 10, justifyContent: 'center', alignItems: 'center' },
+  logoImg: { width: 60, height: 60 },
   card: { backgroundColor: '#fff', borderRadius: 30, padding: 25, elevation: 10 },
   headerSection: { marginBottom: 25, alignItems: "center" },
   title: { fontSize: 24, fontWeight: "800", color: "#064E3B" },
-  subtitle: { fontSize: 14, color: "#64748B", marginTop: 5, textAlign: 'center' },
   roleContainer: { flexDirection: "row", gap: 10, marginBottom: 20 },
-  roleCard: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 12, borderRadius: 15, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC', gap: 8 },
+  roleCard: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 12, borderRadius: 15, borderWidth: 1, borderColor: '#E2E8F0' },
   activeRole: { backgroundColor: "#10B981", borderColor: '#10B981' },
-  roleText: { fontWeight: "700", color: "#10B981", fontSize: 14 },
+  roleText: { fontWeight: "700", color: "#10B981" },
   activeRoleText: { color: "#fff" },
   formContainer: { gap: 12 },
-  inputWrapper: { flexDirection: "row", alignItems: "center", backgroundColor: '#F8FAFC', borderRadius: 15, borderWidth: 1, borderColor: '#E2E8F0' },
-  focusedInput: { borderColor: '#10B981', backgroundColor: '#fff' },
+  inputWrapper: { flexDirection: "row", alignItems: "center", backgroundColor: '#F8FAFC', borderRadius: 15, borderWidth: 1, borderColor: '#E2E8F0', minHeight: 55 },
+  focusedInput: { borderColor: '#10B981' },
   icon: { marginLeft: 15 },
-  input: { flex: 1, padding: 16, fontSize: 15, color: '#333' },
+  input: { flex: 1, paddingHorizontal: 15, fontSize: 15, color: '#333' },
   verifyBtn: { backgroundColor: '#10B981', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, marginRight: 10 },
   verifyBtnText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
   submitBtn: { backgroundColor: "#10B981", padding: 18, borderRadius: 15, marginTop: 20, alignItems: "center" },
   submitBtnText: { color: "#fff", fontSize: 16, fontWeight: "800" },
-  footerLink: { marginTop: 20, alignItems: "center" },
-  footerText: { color: "#64748B", fontSize: 14 },
-  loginText: { color: "#10B981", fontWeight: 'bold' },
 });

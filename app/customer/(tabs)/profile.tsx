@@ -1,10 +1,12 @@
 import { useState, useRef, useCallback } from "react";
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, ActivityIndicator, Animated } from "react-native";
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, ActivityIndicator, Animated, Dimensions, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { getToken, removeToken } from "../../../utils/auth";
 import { API_URL } from "../../../utils/api";
 import { useRouter, useFocusEffect } from "expo-router";
+
+const { width } = Dimensions.get("window");
 
 export default function ProfileScreen() {
   const [user, setUser] = useState<any>(null);
@@ -41,14 +43,15 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     await removeToken();
-    router.replace("/auth/login");
+    // ✅ Logout ke baad seedha Role Selection par redirection
+    router.replace("/");
   };
 
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#16A34A" /></View>;
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
         <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
           <View style={styles.avatarWrapper}>
             <Image 
@@ -68,7 +71,6 @@ export default function ProfileScreen() {
               <Text style={styles.statLabel}>Orders</Text>
             </TouchableOpacity>
             <View style={styles.statDivider} />
-            {/* ✨ UPDATED: Points box is now clickable and routes to the rewards page */}
             <TouchableOpacity style={styles.statBox} onPress={() => router.push("/customer/points")}>
               <Text style={styles.statValue}>{user?.points || 0}</Text>
               <Text style={styles.statLabel}>Points</Text>
@@ -108,10 +110,10 @@ const styles = StyleSheet.create({
   avatarWrapper: { position: "relative", marginBottom: 15 },
   avatar: { width: 110, height: 110, borderRadius: 55, borderWidth: 4, borderColor: "#16A34A" },
   editBadge: { position: "absolute", bottom: 0, right: 0, backgroundColor: "#16A34A", padding: 6, borderRadius: 15, borderWidth: 2, borderColor: "#fff" },
-  name: { fontSize: 26, fontWeight: "900", color: "#111827" },
-  email: { color: "#4B5563", marginTop: 4 },
-  statsRow: { flexDirection: "row", marginTop: 30, backgroundColor: "#f0fdf4", borderRadius: 25, paddingVertical: 15, paddingHorizontal: 30 },
-  statBox: { alignItems: "center", paddingHorizontal: 20 },
+  name: { fontSize: 24, fontWeight: "900", color: "#111827", textAlign: 'center' },
+  email: { color: "#4B5563", marginTop: 4, textAlign: 'center' },
+  statsRow: { flexDirection: "row", marginTop: 30, backgroundColor: "#f0fdf4", borderRadius: 25, paddingVertical: 15, paddingHorizontal: width * 0.08 },
+  statBox: { alignItems: "center", paddingHorizontal: 15 },
   statDivider: { width: 1, height: 30, backgroundColor: "#D1D5DB" },
   statValue: { fontSize: 22, fontWeight: "800", color: "#16A34A" },
   statLabel: { fontSize: 13, color: "#6B7280" },
