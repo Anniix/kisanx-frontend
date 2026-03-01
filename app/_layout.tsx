@@ -1,6 +1,19 @@
 import { Stack } from "expo-router";
 import { CartProvider } from "../context/CartContext";
 import { WishlistProvider } from "../context/WishlistContext";
+import * as Notifications from "expo-notifications";
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
+
+// ✨ Notification handler set karne ka sahi tareeka
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,  
+    shouldShowList: true,     
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 export default function RootLayout() {
   return (

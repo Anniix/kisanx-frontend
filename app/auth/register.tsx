@@ -119,7 +119,6 @@ export default function Register() {
       const data = await res.json();
       
       if (!res.ok) {
-        // ✨ UPDATED: Ab generic message nahi, asli vajah dikhayega
         return Alert.alert("Registration Error", data.message || "Failed to create account");
       }
 
@@ -147,7 +146,11 @@ export default function Register() {
             
             <View style={styles.logoWrapper}>
               <View style={styles.logoCircle}>
-                <Image source={require("../../assets/images/logo.png")} style={styles.logoImg} />
+                <Image 
+                  source={require("../../assets/images/logo.png")} 
+                  style={styles.logoImg} 
+                  resizeMode="cover" 
+                />
               </View>
             </View>
 
@@ -243,8 +246,22 @@ const styles = StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: "#F0FDF4" },
   scrollContainer: { paddingHorizontal: 20, paddingBottom: 40, flexGrow: 1, paddingTop: 60 },
   logoWrapper: { alignItems: 'center', marginBottom: 20 },
-  logoCircle: { width: 90, height: 90, backgroundColor: "#fff", borderRadius: 45, elevation: 10, justifyContent: 'center', alignItems: 'center' },
-  logoImg: { width: 60, height: 60 },
+  logoCircle: { 
+    width: 110, 
+    height: 110, 
+    backgroundColor: "#fff", 
+    borderRadius: 55, 
+    elevation: 15, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    overflow: 'hidden', // Image ko circle ke bahar nahi jane dega
+    borderWidth: 2,
+    borderColor: '#10B981', // Screenshot jaisa green border
+  },
+  logoImg: { 
+    width: '100%', 
+    height: '100%', 
+  },
   card: { backgroundColor: '#fff', borderRadius: 30, padding: 25, elevation: 10 },
   headerSection: { marginBottom: 25, alignItems: "center" },
   title: { fontSize: 24, fontWeight: "800", color: "#064E3B" },

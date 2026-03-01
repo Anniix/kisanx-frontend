@@ -40,8 +40,9 @@ export default function FarmerProfileScreen() {
   };
 
   const handleLogout = async () => {
-    await removeToken();
-    router.replace("/auth/login");
+    await removeToken(); // Token remove hoga
+    // ✅ Farmer logout ke baad bhi seedha Role Selection par jayega
+    router.replace("/"); // Root route par redirect
   };
 
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#16A34A" /></View>;

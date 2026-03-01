@@ -43,24 +43,45 @@ export default function FarmerDashboard() {
     totalOrders: 0
   });
 
-  const salesData = useMemo(() => {
-    const analysis: { [key: string]: number } = {};
-    allOrders.forEach(order => {
-      order.items.forEach((item: any) => {
-        const prodName = item.productId?.name || "Unknown";
-        const isMyProduct = myProducts.some(p => p._id === item.productId?._id);
-        if (isMyProduct) {
-          analysis[prodName] = (analysis[prodName] || 0) + (item.quantity * (item.productId?.price / 100 || 0));
-        }
-      });
+  // ✨ UPGRADED ANALYSIS LOGIC
+  const processedSalesData = useMemo(() => {
+    // 1. Initialize data with ALL farmer products (so they show even with 0 sales)
+    const analysisMap: { [key: string]: any } = {};
+    
+    myProducts.forEach(p => {
+      analysisMap[p._id] = {
+        name: p.name,
+        category: p.category,
+        unit: p.category === 'grains' ? 'Quintal' : 'kg',
+        soldQty: 0,
+        revenue: 0,
+        totalStock: p.quantity,
+        id: p._id
+      };
     });
-    return Object.entries(analysis)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
-  }, [allOrders, myProducts]);
 
-  const maxSales = Math.max(...salesData.map(d => d.value), 1);
-  const topProduct = salesData.length > 0 ? salesData[0] : null;
+    // 2. Add sales data ONLY from DELIVERED orders
+    allOrders.forEach(order => {
+      if (order.orderStatus === "Delivered") {
+        order.items.forEach((item: any) => {
+          const prodId = item.productId?._id || item.productId;
+          if (analysisMap[prodId]) {
+            const qty = Number(item.quantity) || 0;
+            const price = item.productId?.price || 0;
+            
+            analysisMap[prodId].soldQty += qty;
+            analysisMap[prodId].revenue += (qty * price);
+          }
+        });
+      }
+    });
+
+    const result = Object.values(analysisMap);
+    return {
+      essentials: result.filter(p => p.category !== 'grains'),
+      grains: result.filter(p => p.category === 'grains')
+    };
+  }, [allOrders, myProducts]);
 
   const getLocation = async () => {
     let { status } = await Location.requestForegroundPermissionsAsync();
@@ -93,10 +114,15 @@ export default function FarmerDashboard() {
       const filteredProducts = prodRes.data.filter((p: any) => p.farmerId?._id === decoded?.id || p.farmerId === decoded?.id);
       setMyProducts(filteredProducts);
 
+      // ✨ Earnings calculation updated: Sum only DELIVERED orders
+      const deliveredEarnings = orders
+        .filter((o: any) => o.orderStatus === "Delivered")
+        .reduce((acc: number, curr: any) => acc + (curr.totalAmount || 0), 0);
+
       setStats({
         totalProducts: filteredProducts.length,
         pendingOrders: orders.filter((o: any) => o.orderStatus === "Placed").length,
-        earnings: orders.reduce((acc: number, curr: any) => acc + (curr.totalAmount || 0), 0),
+        earnings: deliveredEarnings,
         totalOrders: orders.length
       });
     } catch (err) {
@@ -118,21 +144,52 @@ export default function FarmerDashboard() {
     getLocation();
   }, []);
 
-  // ✨ DELETE PRODUCT HANDLER
   const handleDeleteProduct = async (id: string, name: string) => {
-    Alert.alert("Delete Crop", `Are you sure you want to remove ${name}? Customer offers and listings will be removed.`, [
+    Alert.alert("Delete Crop", `Are you sure?`, [
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: async () => {
           try {
             await api.delete(`/products/${id}`);
-            fetchData(); // Dashboard reload
-            Alert.alert("Success", "Product removed successfully");
-          } catch (e) {
-            Alert.alert("Error", "Could not delete product");
-          }
+            fetchData();
+            Alert.alert("Success", "Product removed");
+          } catch (e) { Alert.alert("Error", "Could not delete"); }
         }
       }
     ]);
+  };
+
+  const AnalysisBarChart = ({ title, subtitle, data, color }: any) => {
+    if (data.length === 0) return null;
+    const maxVal = Math.max(...data.map((d: any) => d.revenue), 100);
+
+    return (
+      <View style={styles.analysisCard}>
+        <View style={styles.insightHeader}>
+          <View>
+            <Text style={styles.insightTitle}>{title}</Text>
+            <Text style={styles.insightSub}>{subtitle}</Text>
+          </View>
+          <View style={[styles.unitBadge, { backgroundColor: color + '15' }]}>
+            <Text style={[styles.unitBadgeText, { color: color }]}>{data[0].unit}</Text>
+          </View>
+        </View>
+
+        <View style={styles.chartContainer}>
+          {data.map((item: any, index: number) => (
+            <View key={index} style={styles.barWrapper}>
+              <View style={styles.barInfoTop}>
+                <Text style={[styles.barValueText, { color }]}>₹{item.revenue > 1000 ? `${(item.revenue/1000).toFixed(1)}k` : item.revenue.toFixed(0)}</Text>
+              </View>
+              <View style={styles.barTrack}>
+                <View style={[styles.barFill, { height: `${(item.revenue / maxVal) * 100}%`, backgroundColor: color }]} />
+              </View>
+              <Text style={styles.barLabel} numberOfLines={1}>{item.name}</Text>
+              <Text style={styles.soldQtyLabel}>{item.soldQty} Sold</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
   };
 
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#10B981" /></View>;
@@ -156,7 +213,11 @@ export default function FarmerDashboard() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#10B981"]} />} showsVerticalScrollIndicator={false}>
-        <View style={styles.welcomeContainer}><Text style={styles.greetingText}>Namaste!! {user?.firstName}!</Text><Text style={styles.subGreeting}>Aapka farm aaj kaisa hai?</Text></View>
+        <View style={styles.welcomeContainer}>
+            <Text style={styles.greetingText}>Namaste!! {user?.firstName}!</Text>
+            <Text style={styles.subGreeting}>Aapka farm aaj kaisa hai?</Text>
+        </View>
+
         <View style={styles.statsGrid}>
           <TouchableOpacity style={[styles.statCard, { backgroundColor: '#F0FDF4' }]} onPress={() => setInventoryVisible(true)}>
             <View style={styles.statIconBox}><Ionicons name="cube-outline" size={22} color="#10B981" /></View>
@@ -168,24 +229,39 @@ export default function FarmerDashboard() {
         </View>
 
         <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.actionRow}><ActionBtn label="Add Crop" icon="add" color="#10B981" onPress={() => router.push("/farmer/add-product")} /><ActionBtn label="Orders" icon="list" color="#F59E0B" onPress={() => router.push("/farmer/orders" as any)} /></View>
+        <View style={styles.actionRow}>
+            <ActionBtn label="Add Crop" icon="add" color="#10B981" onPress={() => router.push("/farmer/add-product")} />
+            <ActionBtn label="Orders" icon="list" color="#F59E0B" onPress={() => router.push("/farmer/orders" as any)} />
+        </View>
 
         <Text style={styles.sectionTitle}>Sales Momentum & Analysis</Text>
-        <View style={styles.analysisCard}>
-            {salesData.length > 0 ? (
-                <>
-                    <View style={styles.insightHeader}><View><Text style={styles.insightTitle}>Performance Review</Text><Text style={styles.insightSub}>Your crop sales are growing! 📈</Text></View>{topProduct && (<View style={styles.bestSellerBadge}><Ionicons name="ribbon" size={14} color="#F59E0B" /><Text style={styles.bestSellerText}>Top: {topProduct.name}</Text></View>)}</View>
-                    <View style={styles.chartContainer}>
-                        {salesData.map((item, index) => (
-                            <View key={index} style={styles.barWrapper}><View style={styles.barInfoTop}><Text style={styles.barValueText}>₹{item.value > 1000 ? `${(item.value/1000).toFixed(1)}k` : item.value.toFixed(0)}</Text></View><View style={styles.barTrack}><View style={[styles.barFill, { height: `${(item.value / maxSales) * 100}%` }, index === 0 && { backgroundColor: '#10B981' }]} /></View><Text style={styles.barLabel} numberOfLines={1}>{item.name}</Text></View>
-                        ))}
-                    </View>
-                    <View style={styles.divider} /><View style={styles.summaryRow}><View style={styles.summaryItem}><Text style={styles.summaryLabel}>Total Revenue</Text><Text style={styles.summaryVal}>₹{stats.earnings.toFixed(2)}</Text></View><View style={styles.summaryDivider} /><View style={styles.summaryItem}><Text style={styles.summaryLabel}>Average/Crop</Text><Text style={styles.summaryVal}>₹{(stats.earnings / (salesData.length || 1)).toFixed(0)}</Text></View></View>
-                </>
-            ) : (<View style={styles.emptyChart}><View style={styles.emptyIconCircle}><MaterialCommunityIcons name="finance" size={40} color="#D1D5DB" /></View><Text style={styles.emptyChartText}>No sales data recorded yet.</Text><Text style={styles.emptyChartSub}>Complete your first order to see analysis!</Text></View>)}
-        </View>
+        
+        {/* ✨ DUAL ANALYSIS CARDS */}
+        {myProducts.length > 0 ? (
+            <>
+                <AnalysisBarChart 
+                    title="Essential Crops (kg)" 
+                    subtitle="Fruits, Veggies & Spices performance" 
+                    data={processedSalesData.essentials} 
+                    color="#10B981" 
+                />
+                <View style={{ height: 15 }} />
+                <AnalysisBarChart 
+                    title="Grain Market (Quintal)" 
+                    subtitle="Commercial grain sales analysis" 
+                    data={processedSalesData.grains} 
+                    color="#3B82F6" 
+                />
+            </>
+        ) : (
+            <View style={styles.emptyChart}>
+                <MaterialCommunityIcons name="finance" size={40} color="#D1D5DB" />
+                <Text style={styles.emptyChartText}>No products listed yet.</Text>
+            </View>
+        )}
       </ScrollView>
 
+      {/* Inventory Modal */}
       <Modal visible={inventoryVisible} animationType="slide">
         <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
             <View style={styles.modalHeader}><TouchableOpacity onPress={() => setInventoryVisible(false)} style={styles.closeBtn}><Ionicons name="close" size={28} color="#1F2937" /></TouchableOpacity><Text style={styles.modalTitle}>Stock Inventory</Text></View>
@@ -199,12 +275,11 @@ export default function FarmerDashboard() {
                         <View style={{ flex: 1, marginLeft: 15 }}>
                             <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
                                 <Text style={styles.invName}>{item.name}</Text>
-                                {/* ✨ DELETE BUTTON ADDED */}
                                 <TouchableOpacity onPress={() => handleDeleteProduct(item._id, item.name)}>
                                     <Ionicons name="trash-outline" size={22} color="#EF4444" />
                                 </TouchableOpacity>
                             </View>
-                            <Text style={[styles.stockValue, item.quantity <= 0 && { color: '#EF4444' }]}>Remaining: {Number(item.quantity).toFixed(3)} kg</Text>
+                            <Text style={[styles.stockValue, item.quantity <= 0 && { color: '#EF4444' }]}>Remaining: {Number(item.quantity).toFixed(2)} kg</Text>
                         </View>
                     </View>
                 )}
@@ -212,7 +287,12 @@ export default function FarmerDashboard() {
         </SafeAreaView>
       </Modal>
 
-      <View style={styles.bottomNav}><NavIcon icon="home" label="Home" active /><NavIcon icon="cube-outline" label="My Crops" onPress={() => setInventoryVisible(true)} /><NavIcon icon="chatbubbles-outline" label="AI Help" onPress={() => router.push("/farmer/chat")} /><NavIcon icon="person-outline" label="Profile" onPress={() => router.push("/farmer/profile")} /></View>
+      <View style={styles.bottomNav}>
+        <NavIcon icon="home" label="Home" active />
+        <NavIcon icon="cube-outline" label="My Crops" onPress={() => setInventoryVisible(true)} />
+        <NavIcon icon="chatbubbles-outline" label="AI Help" onPress={() => router.push("/farmer/chat")} />
+        <NavIcon icon="person-outline" label="Profile" onPress={() => router.push("/farmer/profile")} />
+      </View>
     </SafeAreaView>
   );
 }
@@ -228,7 +308,18 @@ const NavIcon = ({ icon, label, active, onPress }: any) => (
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FDFDFD" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  header: { backgroundColor: "#10B981", flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, height: Platform.OS === 'ios' ? 120 : 105, paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight ? RNStatusBar.currentHeight + 10 : 25) : 50, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, elevation: 15 },
+  header: { 
+    backgroundColor: "#10B981", 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 20, 
+    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight ? RNStatusBar.currentHeight + 10 : 40) : 10,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 30, 
+    borderBottomRightRadius: 30, 
+    elevation: 15 
+  },
   logoRow: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   logoCircle: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'white', marginRight: 12, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
   logoImg: { width: '100%', height: '100%' },
@@ -250,29 +341,26 @@ const styles = StyleSheet.create({
   actionRow: { flexDirection: "row", gap: 15 },
   bigBtn: { flex: 1, height: 95, borderRadius: 22, justifyContent: 'center', alignItems: 'center', elevation: 6 },
   btnLab: { color: "white", fontWeight: "800", marginTop: 8 },
-  analysisCard: { backgroundColor: '#fff', borderRadius: 30, padding: 25, elevation: 8, marginBottom: 20, borderWidth: 1, borderColor: '#F1F5F9' },
-  insightHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 25 },
-  insightTitle: { fontSize: 18, fontWeight: '900', color: '#1E293B' },
-  insightSub: { fontSize: 12, color: '#64748B', fontWeight: '600', marginTop: 2 },
-  bestSellerBadge: { backgroundColor: '#FFFBEB', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: '#FEF3C7' },
-  bestSellerText: { color: '#B45309', fontSize: 10, fontWeight: '800' },
-  chartContainer: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-around', height: 180, marginBottom: 20 },
-  barWrapper: { alignItems: 'center', width: 55 },
-  barInfoTop: { marginBottom: 8 },
-  barValueText: { fontSize: 10, fontWeight: '900', color: '#10B981' },
-  barTrack: { height: 110, width: 18, backgroundColor: '#F8FAFC', borderRadius: 10, justifyContent: 'flex-end', overflow: 'hidden' },
-  barFill: { backgroundColor: '#34D399', width: '100%', borderRadius: 10 },
-  barLabel: { fontSize: 10, fontWeight: '800', color: '#64748B', marginTop: 12, textAlign: 'center' },
-  divider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 15 },
-  summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  summaryItem: { flex: 1, alignItems: 'center' },
-  summaryLabel: { fontSize: 11, color: '#94A3B8', fontWeight: '700', marginBottom: 4 },
-  summaryVal: { fontSize: 16, fontWeight: '900', color: '#1E293B' },
-  summaryDivider: { width: 1, height: 25, backgroundColor: '#F1F5F9' },
-  emptyChart: { paddingVertical: 40, alignItems: 'center' },
-  emptyIconCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#F9FAFB', justifyContent: 'center', alignItems: 'center', marginBottom: 15 },
-  emptyChartText: { color: '#475569', fontSize: 16, fontWeight: '800' },
-  emptyChartSub: { color: '#94A3B8', fontSize: 12, marginTop: 5, fontWeight: '600' },
+  
+  // Analysis & Chart Styles
+  analysisCard: { backgroundColor: '#fff', borderRadius: 30, padding: 20, elevation: 8, borderWidth: 1, borderColor: '#F1F5F9' },
+  insightHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
+  insightTitle: { fontSize: 16, fontWeight: '900', color: '#1E293B' },
+  insightSub: { fontSize: 11, color: '#64748B', fontWeight: '600', marginTop: 2 },
+  unitBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
+  unitBadgeText: { fontSize: 10, fontWeight: '800' },
+  chartContainer: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'flex-start', height: 160, gap: 12 },
+  barWrapper: { alignItems: 'center', width: 60 },
+  barInfoTop: { marginBottom: 5 },
+  barValueText: { fontSize: 10, fontWeight: '900' },
+  barTrack: { height: 90, width: 22, backgroundColor: '#F8FAFC', borderRadius: 8, justifyContent: 'flex-end', overflow: 'hidden', borderWidth: 1, borderColor: '#F1F5F9' },
+  barFill: { width: '100%', borderRadius: 4 },
+  barLabel: { fontSize: 10, fontWeight: '800', color: '#334155', marginTop: 8, textAlign: 'center' },
+  soldQtyLabel: { fontSize: 8, color: '#94A3B8', fontWeight: '700' },
+  
+  emptyChart: { paddingVertical: 40, alignItems: 'center', backgroundColor: '#fff', borderRadius: 30 },
+  emptyChartText: { color: '#94A3B8', fontSize: 14, fontWeight: '700', marginTop: 10 },
+  
   bottomNav: { position: 'absolute', bottom: 0, width: '100%', height: 75, backgroundColor: 'white', flexDirection: 'row', borderTopWidth: 1, borderColor: '#F1F5F9', paddingBottom: 10 },
   navItem: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   navLab: { fontSize: 10, color: "#94A3B8", marginTop: 4, fontWeight: '700' },

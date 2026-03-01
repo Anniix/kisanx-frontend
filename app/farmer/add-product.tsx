@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import React, { useState, useEffect } from "react";
 import { 
   ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, 
-  TextInput, TouchableOpacity, View, SafeAreaView 
+  TextInput, TouchableOpacity, View, SafeAreaView, StatusBar as RNStatusBar, Platform
 } from "react-native";
 import api from "../../utils/api";
 
@@ -12,7 +12,7 @@ const CATEGORIES = [
   { id: "vegetables", name: "Vegetables", icon: "carrot", unit: "kg" },
   { id: "fruits", name: "Fruits", icon: "food-apple", unit: "kg" },
   { id: "grains", name: "Grains", icon: "barley", unit: "Quintal" },
-  {id: "spices", name: "Spices", icon: "leaf", unit: "kg" },
+  { id: "spices", name: "Spices", icon: "leaf", unit: "kg" },
 ];
 
 export default function AddProduct() {
@@ -47,8 +47,12 @@ export default function AddProduct() {
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
+      // ✨ FIX: MediaTypeOptions.Images ka use karein
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true, aspect: [4, 3], quality: 0.2, base64: true
+      allowsEditing: true, 
+      aspect: [4, 3], 
+      quality: 0.2, 
+      base64: true
     });
     if (!result.canceled) setImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
   };
@@ -57,14 +61,13 @@ export default function AddProduct() {
     if (!form.name || !form.price || !image || !form.quantity) return Alert.alert("Required", "Fill all fields.");
     setLoading(true);
     try {
-      // ✨ Send 'unit' so backend knows if it needs to normalize the price
       await api.post("/products", { 
         ...form, 
         price: Number(form.price), 
         quantity: Number(form.quantity), 
         image 
       });
-      Alert.alert("Success 🎉", "Product Published!");
+      Alert.alert("Success 🎉", "Product Published! Customers in your area will be notified. 🌿");
       router.back();
     } catch (err) { Alert.alert("Error", "Server Error"); } finally { setLoading(false); }
   };
@@ -127,7 +130,17 @@ const CompareBox = ({ label, price, color, unit }: any) => (
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#F8FAFC" },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight ? RNStatusBar.currentHeight + 10 : 20) : 10,
+    paddingBottom: 20, 
+    backgroundColor: '#fff', 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#F1F5F9' 
+  },
   headerTitle: { fontSize: 18, fontWeight: '900', color: '#064E3B' },
   backBtn: { padding: 8, backgroundColor: '#F1F5F9', borderRadius: 12 },
   scroll: { padding: 20 },
