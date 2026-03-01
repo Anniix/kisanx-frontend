@@ -16,7 +16,6 @@ import {
 } from "react-native";
 import { saveToken } from "../../utils/auth";
 import { API_URL } from "../../utils/api";
-// ✨ Notifications imports
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import Constants from "expo-constants";
@@ -30,20 +29,48 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ✨ Push Notification Token generate karne ka function
-  const registerForPushNotificationsAsync = async () => {
-    if (!Device.isDevice) return null;
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
+  // ✅ Try-catch wrap kiya taaki Firebase error pe app crash na kare
+  const registerForPushNotificationsAsync = async (): Promise<string | null> => {
+    try {
+      if (!Device.isDevice) return null;
+      
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      
+      if (finalStatus !== 'granted') return null;
+
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'default',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#10B981',
+        });
+      }
+
+      const projectId = 
+        Constants.expoConfig?.extra?.eas?.projectId || 
+        Constants.easConfig?.projectId;
+
+      if (!projectId) {
+        console.log('Project ID nahi mila, skip kar raha hoon');
+        return null;
+      }
+
+      const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+      console.log('Push Token:', token);
+      return token;
+
+    } catch (error) {
+      // ✅ Error aaye toh login rok nahi — sirf log karo
+      console.log('Push notification setup failed (login continue karega):', error);
+      return null;
     }
-    if (finalStatus !== 'granted') return null;
-    
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
-    const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
-    return token;
   };
 
   const handleLogin = async () => {
@@ -51,7 +78,6 @@ export default function LoginScreen() {
     
     setLoading(true);
     try {
-      // ✨ Login se pehle token lein
       const pushToken = await registerForPushNotificationsAsync();
 
       const response = await fetch(`${API_URL}/auth/login`, {
@@ -60,7 +86,7 @@ export default function LoginScreen() {
         body: JSON.stringify({ 
           email: email.toLowerCase().trim(), 
           password,
-          pushToken // ✨ Backend ko token bhejein
+          pushToken: pushToken || "" // ✅ null ki jagah empty string
         })
       });
 
