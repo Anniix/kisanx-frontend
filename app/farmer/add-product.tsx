@@ -89,7 +89,7 @@ export default function AddProduct() {
 
         <View style={styles.formCard}>
           <Text style={styles.inputLabel}>Crop Name</Text>
-          <TextInput placeholder="Wheat, Tomato, etc." style={styles.input} onChangeText={(t) => setForm({...form, name: t})} />
+          <TextInput placeholder="Wheat, Tomato, etc."  placeholderTextColor="#64748B" style={styles.input} onChangeText={(t) => setForm({...form, name: t})} />
 
           {comparisonData && (
             <View style={styles.compareCard}>
@@ -103,8 +103,8 @@ export default function AddProduct() {
           )}
 
           <View style={styles.row}>
-            <View style={{ flex: 1 }}><Text style={styles.inputLabel}>Price (₹/{form.unit})</Text><TextInput placeholder="0" keyboardType="numeric" style={styles.input} onChangeText={(t) => setForm({...form, price: t})} /></View>
-            <View style={{ width: 15 }} /><View style={{ flex: 1 }}><Text style={styles.inputLabel}>Stock ({form.unit})</Text><TextInput placeholder="0" keyboardType="numeric" style={styles.input} onChangeText={(t) => setForm({...form, quantity: t})} /></View>
+            <View style={{ flex: 1 }}><Text style={styles.inputLabel}>Price (₹/{form.unit})</Text><TextInput placeholder="0"  placeholderTextColor="#64748B" keyboardType="numeric" style={styles.input} onChangeText={(t) => setForm({...form, price: t})} /></View>
+            <View style={{ width: 15 }} /><View style={{ flex: 1 }}><Text style={styles.inputLabel}>Stock ({form.unit})</Text><TextInput placeholder="0"  placeholderTextColor="#64748B" keyboardType="numeric" style={styles.input} onChangeText={(t) => setForm({...form, quantity: t})} /></View>
           </View>
 
           <Text style={styles.inputLabel}>Category</Text>
@@ -116,7 +116,7 @@ export default function AddProduct() {
             ))}
           </View>
           <Text style={styles.inputLabel}>Description</Text>
-          <TextInput placeholder="Quality details..." multiline style={styles.textArea} onChangeText={(t) => setForm({...form, description: t})} />
+          <TextInput placeholder="Quality details..." placeholderTextColor="#64748B" multiline style={styles.textArea} onChangeText={(t) => setForm({...form, description: t})} />
         </View>
         <TouchableOpacity style={styles.submitBtn} onPress={submit} disabled={loading}>{loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitTxt}>Publish Listing</Text>}</TouchableOpacity>
       </ScrollView>
