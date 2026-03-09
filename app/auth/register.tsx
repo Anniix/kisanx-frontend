@@ -28,6 +28,7 @@ export default function Register() {
   const [role, setRole] = useState<"farmer" | "customer">("customer");
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false); // Global toggle for both password fields
   
   const [otpSent, setOtpSent] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
@@ -70,11 +71,7 @@ export default function Register() {
         const data = await res.json(); 
         Alert.alert("Error", data.message || "Failed to send OTP"); 
       }
-    } catch (err) { 
-      Alert.alert("Error", "Server connection failed."); 
-    } finally { 
-      setLoading(false); 
-    }
+    } catch (err) { Alert.alert("Error", "Server connection failed."); } finally { setLoading(false); }
   };
 
   const handleVerifyOTP = async () => {
@@ -92,21 +89,13 @@ export default function Register() {
       } else { 
         Alert.alert("Wrong OTP", data.message || "Check and try again."); 
       }
-    } catch (err) { 
-      Alert.alert("Error", "Failed to verify."); 
-    }
+    } catch (err) { Alert.alert("Error", "Failed to verify."); }
   };
 
   const handleRegister = async () => {
     if (!isVerified) return Alert.alert("Required", "Please verify email first.");
-
-    if (!form.firstName || !form.lastName || !form.phone || !form.password) {
-      return Alert.alert("Error", "Please fill all required fields.");
-    }
-
-    if (form.password !== form.confirmPassword) {
-      return Alert.alert("Error", "Passwords do not match.");
-    }
+    if (!form.firstName || !form.lastName || !form.phone || !form.password) return Alert.alert("Error", "Please fill required fields.");
+    if (form.password !== form.confirmPassword) return Alert.alert("Error", "Passwords do not match.");
 
     setLoading(true);
     try {
@@ -115,49 +104,30 @@ export default function Register() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, role, isVerified: true }),
       });
-      
       const data = await res.json();
-      
-      if (!res.ok) {
-        return Alert.alert("Registration Error", data.message || "Failed to create account");
-      }
-
+      if (!res.ok) return Alert.alert("Registration Error", data.message || "Failed");
       if (data.token) {
         await saveToken(data.token);
-        Alert.alert("Success", "Account created successfully!");
+        Alert.alert("Success", "Account created!");
         router.replace(role === "farmer" ? "/farmer/dashboard" : "/customer/(tabs)");
       }
-    } catch (err) { 
-      Alert.alert("Error", "Network error. Please check your connection."); 
-    } finally { 
-      setLoading(false); 
-    }
+    } catch (err) { Alert.alert("Error", "Network error."); } finally { setLoading(false); }
   };
 
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === "ios" ? "padding" : undefined} 
-        style={{ flex: 1 }}
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], width: '100%' }}>
-            
             <View style={styles.logoWrapper}>
               <View style={styles.logoCircle}>
-                <Image 
-                  source={require("../../assets/images/logo.png")} 
-                  style={styles.logoImg} 
-                  resizeMode="cover" 
-                />
+                <Image source={require("../../assets/images/logo.png")} style={styles.logoImg} resizeMode="cover" />
               </View>
             </View>
 
             <View style={styles.card}>
-              <View style={styles.headerSection}>
-                <Text style={styles.title}>Join KisanX</Text>
-              </View>
+              <View style={styles.headerSection}><Text style={styles.title}>Join KisanX</Text></View>
 
               <View style={styles.roleContainer}>
                 <TouchableOpacity style={[styles.roleCard, role === "customer" && styles.activeRole]} onPress={() => setRole("customer")}>
@@ -176,14 +146,7 @@ export default function Register() {
                 
                 <View style={[styles.inputWrapper, focusedField === "email" && styles.focusedInput]}>
                   <Ionicons name="mail" size={20} color={focusedField === "email" ? "#10B981" : "#94A3B8"} style={styles.icon} />
-                  <TextInput 
-                    placeholder="Email Address" 
-                    placeholderTextColor="#94A3B8"
-                    style={styles.input} 
-                    editable={!isVerified} 
-                    onChangeText={(t)=>update("email",t)} 
-                    autoCapitalize="none"
-                  />
+                  <TextInput placeholder="Email Address" style={styles.input} editable={!isVerified} onChangeText={(t)=>update("email",t)} autoCapitalize="none" />
                   {!isVerified && (
                     <TouchableOpacity style={styles.verifyBtn} onPress={handleSendOTP} disabled={loading}>
                       <Text style={styles.verifyBtnText}>{otpSent ? "Resend" : "Get OTP"}</Text>
@@ -201,8 +164,10 @@ export default function Register() {
                 )}
 
                 <Input icon="call" placeholder="Phone Number" fieldName="phone" onFocus={setFocusedField} focusedField={focusedField} keyboardType="numeric" onChange={(t:any)=>update("phone",t)} />
-                <Input icon="lock-closed" placeholder="Password" fieldName="password" onFocus={setFocusedField} focusedField={focusedField} secure onChange={(t:any)=>update("password",t)} />
-                <Input icon="shield-checkmark" placeholder="Confirm Password" fieldName="confirmPassword" onFocus={setFocusedField} focusedField={focusedField} secure onChange={(t:any)=>update("confirmPassword",t)} />
+                
+                {/* Updated Password Fields with Eye Icon */}
+                <Input icon="lock-closed" placeholder="Password" fieldName="password" onFocus={setFocusedField} focusedField={focusedField} secure showPassword={showPassword} onToggle={() => setShowPassword(!showPassword)} onChange={(t:any)=>update("password",t)} />
+                <Input icon="shield-checkmark" placeholder="Confirm Password" fieldName="confirmPassword" onFocus={setFocusedField} focusedField={focusedField} secure showPassword={showPassword} onToggle={() => setShowPassword(!showPassword)} onChange={(t:any)=>update("confirmPassword",t)} />
                 
                 {role === "farmer" ? (
                   <>
@@ -225,12 +190,12 @@ export default function Register() {
   );
 }
 
-const Input = ({ icon, placeholder, secure, onChange, keyboardType, fieldName, onFocus, focusedField }: any) => (
+const Input = ({ icon, placeholder, secure, onChange, keyboardType, fieldName, onFocus, focusedField, showPassword, onToggle }: any) => (
   <View style={[styles.inputWrapper, focusedField === fieldName && styles.focusedInput]}>
     <Ionicons name={icon} size={20} color={focusedField === fieldName ? "#10B981" : "#94A3B8"} style={styles.icon} />
     <TextInput
       placeholder={placeholder}
-      secureTextEntry={secure}
+      secureTextEntry={secure && !showPassword}
       style={styles.input}
       onChangeText={onChange}
       onFocus={() => onFocus(fieldName)}
@@ -239,6 +204,11 @@ const Input = ({ icon, placeholder, secure, onChange, keyboardType, fieldName, o
       keyboardType={keyboardType}
       autoCapitalize="none"
     />
+    {secure && (
+      <TouchableOpacity onPress={onToggle} style={{ paddingRight: 15 }}>
+        <Ionicons name={showPassword ? "eye-off" : "eye"} size={20} color="#94A3B8" />
+      </TouchableOpacity>
+    )}
   </View>
 );
 
@@ -246,22 +216,8 @@ const styles = StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: "#F0FDF4" },
   scrollContainer: { paddingHorizontal: 20, paddingBottom: 40, flexGrow: 1, paddingTop: 60 },
   logoWrapper: { alignItems: 'center', marginBottom: 20 },
-  logoCircle: { 
-    width: 110, 
-    height: 110, 
-    backgroundColor: "#fff", 
-    borderRadius: 55, 
-    elevation: 15, 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    overflow: 'hidden', // Image ko circle ke bahar nahi jane dega
-    borderWidth: 2,
-    borderColor: '#10B981', // Screenshot jaisa green border
-  },
-  logoImg: { 
-    width: '100%', 
-    height: '100%', 
-  },
+  logoCircle: { width: 110, height: 110, backgroundColor: "#fff", borderRadius: 55, elevation: 15, justifyContent: 'center', alignItems: 'center', overflow: 'hidden', borderWidth: 2, borderColor: '#10B981' },
+  logoImg: { width: '100%', height: '100%' },
   card: { backgroundColor: '#fff', borderRadius: 30, padding: 25, elevation: 10 },
   headerSection: { marginBottom: 25, alignItems: "center" },
   title: { fontSize: 24, fontWeight: "800", color: "#064E3B" },

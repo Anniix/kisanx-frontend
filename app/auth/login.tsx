@@ -27,23 +27,19 @@ export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false); // New state for eye icon
   const [loading, setLoading] = useState(false);
 
-  // ✅ Try-catch wrap kiya taaki Firebase error pe app crash na kare
   const registerForPushNotificationsAsync = async (): Promise<string | null> => {
     try {
       if (!Device.isDevice) return null;
-      
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
-      
       if (existingStatus !== 'granted') {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
       }
-      
       if (finalStatus !== 'granted') return null;
-
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
           name: 'default',
@@ -52,53 +48,36 @@ export default function LoginScreen() {
           lightColor: '#10B981',
         });
       }
-
-      const projectId = 
-        Constants.expoConfig?.extra?.eas?.projectId || 
-        Constants.easConfig?.projectId;
-
-      if (!projectId) {
-        console.log('Project ID nahi mila, skip kar raha hoon');
-        return null;
-      }
-
+      const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
+      if (!projectId) return null;
       const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
-      console.log('Push Token:', token);
       return token;
-
     } catch (error) {
-      // ✅ Error aaye toh login rok nahi — sirf log karo
-      console.log('Push notification setup failed (login continue karega):', error);
+      console.log('Push notification setup failed:', error);
       return null;
     }
   };
 
   const handleLogin = async () => {
     if (!email || !password) return Alert.alert("Missing Info", "Please fill all fields");
-    
     setLoading(true);
     try {
       const pushToken = await registerForPushNotificationsAsync();
-
       const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           email: email.toLowerCase().trim(), 
           password,
-          pushToken: pushToken || "" // ✅ null ki jagah empty string
+          pushToken: pushToken || "" 
         })
       });
-
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Login failed");
-
       if (data.user.role !== selectedRole) {
         throw new Error(`This account is registered as a ${data.user.role}. Please login with the correct role.`);
       }
-
       await saveToken(data.token);
-      
       if (data.user.role === "farmer") {
         router.replace("/farmer/dashboard");
       } else {
@@ -135,14 +114,20 @@ export default function LoginScreen() {
               style={styles.input} 
               autoCapitalize="none" 
             />
-            <TextInput 
-              placeholder="Password" 
-              placeholderTextColor="#64748B"
-              value={password} 
-              onChangeText={setPassword} 
-              style={styles.input} 
-              secureTextEntry 
-            />
+            {/* Password input with Eye Icon */}
+            <View style={styles.passwordInputContainer}>
+              <TextInput 
+                placeholder="Password" 
+                placeholderTextColor="#64748B"
+                value={password} 
+                onChangeText={setPassword} 
+                style={styles.flexInput} 
+                secureTextEntry={!showPassword} 
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+                <Ionicons name={showPassword ? "eye-off" : "eye"} size={22} color="#64748B" />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
@@ -173,6 +158,9 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, textAlign: 'center', color: '#64748B', marginBottom: 25 },
   inputGroup: { gap: 15 },
   input: { backgroundColor: '#F8FAFC', padding: 18, borderRadius: 15, fontSize: 16, borderWidth: 1, borderColor: '#E2E8F0', color: '#333' },
+  passwordInputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 15, borderWidth: 1, borderColor: '#E2E8F0' },
+  flexInput: { flex: 1, padding: 18, fontSize: 16, color: '#333' },
+  eyeBtn: { paddingRight: 15 },
   button: { backgroundColor: '#10B981', padding: 18, borderRadius: 15, marginTop: 20 },
   buttonText: { color: '#fff', textAlign: 'center', fontWeight: '800', fontSize: 16 },
   forgotText: { color: '#10B981', marginTop: 15, textAlign: 'center', fontSize: 14, fontWeight: '600' },

@@ -11,11 +11,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  ActivityIndicator,
   Alert,
 } from "react-native";
-import { getToken } from "../../utils/auth";
-import { API_URL } from "../../utils/api";
 
 type Message = {
   id: number;
@@ -25,16 +22,31 @@ type Message = {
 
 const INITIAL_MESSAGE: Message = {
   id: 1,
-  text: "Namaste! 🌱 Main KisanX AI hun. Aapki fasal, mitti, khad, keede ya bazar — kisi bhi cheez ke baare mein poochh sakte hain!",
+  text: "Namaste! 🌱 KisanX Sahayak mein aapka swagat hai. Main aapki fasal bechne aur order track karne mein madad kar sakta hun.",
   sender: "bot",
 };
 
-const QUICK_QUESTIONS = [
-  "Meri fasal ke liye khad batao",
-  "Kaunsi fasal lagaun is season?",
-  "Keede maar dawa kaunsi use karein?",
-  "Mitti ki janch kaise karein?",
-];
+// 📚 Static Knowledge Base (No API Needed)
+const STATIC_RESPONSES: Record<string, string> = {
+  // --- Product Adding Questions ---
+  "Product kaise list karein?": "Apna product list karne ke liye 'Add Product' button par jayein, photo kheinchein aur sahi daam bharein.",
+  "Photo kaisi honi chahiye?": "Photo saaf honi chahiye aur khet ki taazi fasal dikhni chahiye. Dhundhli photo se customer nahi kharidte.",
+  "Price kya rakhun?": "Market rate se 10-15% kam rakhenge toh aapka maal jaldi bikega. Aap 'Mandi Rates' section mein aaj ka bhav dekh sakte hain.",
+  "Maal kharab ho gaya toh?": "Agar delivery se pehle maal kharab hota hai, toh turant order cancel karein taaki customer ko refund mil sake.",
+  "Minimum kitna bech sakte hain?": "KisanX par aap kam se kam 1kg se lekar jitna chahein utna bech sakte hain.",
+  "Packing ka kharcha kaun dega?": "Packing ka kharcha kisan ko dena hota hai, isliye apna price set karte waqt packing ka kharcha jod lein.",
+  "Chemicals ki jaankari dena zaroori hai?": "Haan, agar aapne organic kheti ki hai toh zaroor batayein, isse aapko behtar daam milenge.",
+  
+  // --- Payment & Commission ---
+  "Mera paisa kab milega?": "Customer ko order milne ke 24-48 ghanton ke andar paisa aapke bank account mein bhej diya jata hai.",
+  "KisanX charges kitna hai?": "Hum sirf 5% commission lete hain taaki kisan ko zyada se zyada munafe mile.",
+  
+  // --- Logistics ---
+  "Delivery kaun karega?": "KisanX ke partner delivery boy aapke khet ya ghar se mal uthayenge. Aapko kahin jane ki zaroorat nahi.",
+  "Order track karein": "📦 Order Status: Aapka aakhri order abhi 'In-Transit' hai. \n\n🚚 Delivery Partner: Rahul Kumar\n⏳ Remaining Time: Lagbhag 45 minutes mein customer tak pahunch jayega.",
+};
+
+const QUICK_QUESTIONS = Object.keys(STATIC_RESPONSES);
 
 export default function Chat() {
   const router = useRouter();
@@ -47,7 +59,7 @@ export default function Chat() {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   }, [messages, typing]);
 
-  const sendMessage = async (text?: string) => {
+  const sendMessage = (text?: string) => {
     const messageText = (text || input).trim();
     if (!messageText) return;
 
@@ -61,72 +73,49 @@ export default function Chat() {
     setInput("");
     setTyping(true);
 
-    try {
-      const token = await getToken();
-
-      // Build conversation history (exclude initial bot greeting for API)
-      const allMessages = [...messages, userMessage];
-      const apiMessages = allMessages.filter(
-        (m) => !(m.id === 1 && m.sender === "bot")
-      );
-
-      const res = await fetch(`${API_URL}/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ messages: apiMessages }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.message || "Failed");
+    // Simulated Bot Thinking
+    setTimeout(() => {
+      let reply = "Maafi chahta hun, mujhe is baare mein jaankari nahi hai. Kripya diye gaye sawalon mein se chunein.";
+      
+      // Keyword matching logic
+      const lowerText = messageText.toLowerCase();
+      if (STATIC_RESPONSES[messageText]) {
+        reply = STATIC_RESPONSES[messageText];
+      } else if (lowerText.includes("order") || lowerText.includes("kahan hai") || lowerText.includes("track")) {
+        reply = STATIC_RESPONSES["Order track karein"];
+      } else if (lowerText.includes("paisa") || lowerText.includes("payment")) {
+        reply = STATIC_RESPONSES["Mera paisa kab milega?"];
+      }
 
       const botMessage: Message = {
         id: Date.now() + 1,
-        text: data.reply,
+        text: reply,
         sender: "bot",
       };
 
       setMessages((prev) => [...prev, botMessage]);
-    } catch (error: any) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          text: "Maafi chahta hun, abhi AI se connect nahi ho pa raha. Thodi der baad dobara try karein. 🙏",
-          sender: "bot",
-        },
-      ]);
-    } finally {
       setTyping(false);
-    }
+    }, 800); 
   };
 
   const clearChat = () => {
-    Alert.alert("Chat Clear Karein?", "Saari baatein hat jaayengi.", [
-      { text: "Raho", style: "cancel" },
-      {
-        text: "Haan, Clear Karo",
-        style: "destructive",
-        onPress: () => setMessages([INITIAL_MESSAGE]),
-      },
+    Alert.alert("Chat Clear Karein?", "Saari purani baatein hat jayengi.", [
+      { text: "Nahi", style: "cancel" },
+      { text: "Haan", style: "destructive", onPress: () => setMessages([INITIAL_MESSAGE]) },
     ]);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={26} color="#064E3B" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <View style={styles.aiDot} />
+          <View style={styles.statusDot} />
           <View>
-            <Text style={styles.title}>KisanX AI</Text>
-            <Text style={styles.subtitle}>Farming Assistant</Text>
+            <Text style={styles.title}>KisanX Sahayak</Text>
+            <Text style={styles.subtitle}>24/7 Support</Text>
           </View>
         </View>
         <TouchableOpacity onPress={clearChat} style={styles.clearBtn}>
@@ -134,93 +123,48 @@ export default function Chat() {
         </TouchableOpacity>
       </View>
 
-      {/* Messages */}
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={styles.messagesContainer}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
       >
         {messages.map((msg) => (
-          <View
-            key={msg.id}
-            style={[
-              styles.bubbleWrapper,
-              msg.sender === "user" ? styles.userWrapper : styles.botWrapper,
-            ]}
-          >
-            {msg.sender === "bot" && (
-              <View style={styles.botAvatar}>
-                <Text style={styles.botAvatarText}>🌿</Text>
-              </View>
-            )}
-            <View
-              style={[
-                styles.bubble,
-                msg.sender === "user" ? styles.userBubble : styles.botBubble,
-              ]}
-            >
-              <Text
-                style={
-                  msg.sender === "user" ? styles.userText : styles.botText
-                }
-              >
-                {msg.text}
-              </Text>
+          <View key={msg.id} style={[styles.bubbleWrapper, msg.sender === "user" ? styles.userWrapper : styles.botWrapper]}>
+            <View style={[styles.bubble, msg.sender === "user" ? styles.userBubble : styles.botBubble]}>
+              <Text style={msg.sender === "user" ? styles.userText : styles.botText}>{msg.text}</Text>
             </View>
           </View>
         ))}
 
-        {/* Typing indicator */}
         {typing && (
-          <View style={[styles.bubbleWrapper, styles.botWrapper]}>
-            <View style={styles.botAvatar}>
-              <Text style={styles.botAvatarText}>🌿</Text>
-            </View>
-            <View style={[styles.bubble, styles.botBubble, styles.typingBubble]}>
-              <ActivityIndicator size="small" color="#10B981" />
-              <Text style={styles.typingText}>AI soch raha hai...</Text>
+          <View style={styles.botWrapper}>
+            <View style={[styles.bubble, styles.botBubble]}>
+              <Text style={styles.botText}>Sochein rahe hain... 🌱</Text>
             </View>
           </View>
         )}
 
-        {/* Quick questions — show only at start */}
-        {messages.length === 1 && !typing && (
-          <View style={styles.quickSection}>
-            <Text style={styles.quickTitle}>Jaldi poochhen 👇</Text>
+        <View style={styles.quickSection}>
+          <Text style={styles.quickTitle}>Sawaal chunein:</Text>
+          <View style={styles.chipsContainer}>
             {QUICK_QUESTIONS.map((q, i) => (
-              <TouchableOpacity
-                key={i}
-                style={styles.quickChip}
-                onPress={() => sendMessage(q)}
-              >
+              <TouchableOpacity key={i} style={styles.quickChip} onPress={() => sendMessage(q)}>
                 <Text style={styles.quickChipText}>{q}</Text>
-                <Ionicons name="arrow-forward" size={14} color="#10B981" />
               </TouchableOpacity>
             ))}
           </View>
-        )}
+        </View>
       </ScrollView>
 
-      {/* Input Bar */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={90}
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={90}>
         <View style={styles.inputBar}>
           <TextInput
             style={styles.input}
-            placeholder="Fasal ke baare mein poochhen..."
-            placeholderTextColor="#9CA3AF"
+            placeholder="Sawaal likhein..."
             value={input}
             onChangeText={setInput}
-            multiline
-            maxLength={500}
-            onSubmitEditing={() => sendMessage()}
-            returnKeyType="send"
           />
-          <TouchableOpacity
-            style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]}
+          <TouchableOpacity 
+            style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]} 
             onPress={() => sendMessage()}
             disabled={!input.trim() || typing}
           >
@@ -233,121 +177,30 @@ export default function Chat() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F0FDF4" },
-
-  // Header
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderColor: "#D1FAE5",
-    elevation: 3,
-  },
+  container: { flex: 1, backgroundColor: "#F7FEE7" },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16, backgroundColor: "#fff", borderBottomWidth: 1, borderColor: "#BEF264" },
+  headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   backBtn: { padding: 4 },
-  headerCenter: { flexDirection: "row", alignItems: "center", gap: 10 },
-  aiDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#10B981",
-  },
-  title: { fontSize: 16, fontWeight: "800", color: "#064E3B" },
+  clearBtn: { padding: 8 },
+  statusDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#22C55E" },
+  title: { fontSize: 17, fontWeight: "bold", color: "#064E3B" },
   subtitle: { fontSize: 11, color: "#6B7280" },
-  clearBtn: { padding: 4 },
-
-  // Messages
-  messagesContainer: { padding: 16, paddingBottom: 8 },
-  bubbleWrapper: { flexDirection: "row", marginBottom: 12, alignItems: "flex-end" },
-  botWrapper: { justifyContent: "flex-start" },
+  messagesContainer: { padding: 16 },
+  bubbleWrapper: { marginBottom: 12, flexDirection: "row" },
   userWrapper: { justifyContent: "flex-end" },
-
-  botAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#D1FAE5",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 8,
-  },
-  botAvatarText: { fontSize: 16 },
-
-  bubble: {
-    padding: 14,
-    borderRadius: 20,
-    maxWidth: "78%",
-  },
-  botBubble: {
-    backgroundColor: "#fff",
-    borderBottomLeftRadius: 4,
-    elevation: 2,
-  },
-  userBubble: {
-    backgroundColor: "#10B981",
-    borderBottomRightRadius: 4,
-    elevation: 2,
-  },
-  botText: { color: "#1F2937", fontSize: 14, lineHeight: 21 },
-  userText: { color: "#fff", fontSize: 14, lineHeight: 21 },
-
-  // Typing
-  typingBubble: { flexDirection: "row", alignItems: "center", gap: 8 },
-  typingText: { color: "#6B7280", fontSize: 13 },
-
-  // Quick questions
-  quickSection: { marginTop: 8 },
-  quickTitle: { fontSize: 13, color: "#6B7280", marginBottom: 8, marginLeft: 40 },
-  quickChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#A7F3D0",
-    borderRadius: 25,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-    marginLeft: 40,
-    elevation: 1,
-  },
-  quickChipText: { fontSize: 13, color: "#065F46", fontWeight: "600" },
-
-  // Input
-  inputBar: {
-    flexDirection: "row",
-    padding: 12,
-    backgroundColor: "#fff",
-    alignItems: "flex-end",
-    gap: 10,
-    borderTopWidth: 1,
-    borderColor: "#D1FAE5",
-    elevation: 5,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: "#F0FDF4",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 25,
-    fontSize: 14,
-    color: "#1F2937",
-    maxHeight: 100,
-    borderWidth: 1,
-    borderColor: "#A7F3D0",
-  },
-  sendBtn: {
-    width: 44,
-    height: 44,
-    backgroundColor: "#10B981",
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 3,
-  },
-  sendBtnDisabled: { backgroundColor: "#A7F3D0" },
+  botWrapper: { justifyContent: "flex-start" },
+  bubble: { padding: 12, borderRadius: 18, maxWidth: "80%" },
+  userBubble: { backgroundColor: "#10B981", borderBottomRightRadius: 2 },
+  botBubble: { backgroundColor: "#fff", borderBottomLeftRadius: 2, elevation: 1 },
+  userText: { color: "#fff", fontSize: 14 },
+  botText: { color: "#1F2937", fontSize: 14, lineHeight: 20 },
+  quickSection: { marginTop: 20, marginBottom: 40 },
+  quickTitle: { fontWeight: "bold", color: "#374151", marginBottom: 12, fontSize: 14 },
+  chipsContainer: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  quickChip: { backgroundColor: "#fff", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: "#10B981" },
+  quickChipText: { color: "#065F46", fontSize: 12, fontWeight: "500" },
+  inputBar: { flexDirection: "row", padding: 12, backgroundColor: "#fff", gap: 10, borderTopWidth: 1, borderColor: "#E5E7EB" },
+  input: { flex: 1, backgroundColor: "#F9FAFB", borderRadius: 25, paddingHorizontal: 18, height: 45, borderWidth: 1, borderColor: "#D1D5DB" },
+  sendBtn: { width: 45, height: 45, backgroundColor: "#10B981", borderRadius: 22.5, alignItems: "center", justifyContent: "center" },
+  sendBtnDisabled: { backgroundColor: "#9CA3AF" },
 });

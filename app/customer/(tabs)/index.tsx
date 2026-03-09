@@ -1,16 +1,26 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
-import { 
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, 
-  RefreshControl, TextInput, Dimensions, StatusBar, FlatList, Platform 
-} from "react-native";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Location from 'expo-location';
 import { useRouter } from "expo-router";
-import { getToken } from "../../../utils/auth";
-import { API_URL } from "../../../utils/api";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Dimensions,
+  FlatList,
+  Image,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from "react-native";
 import { useCart } from "../../../context/CartContext";
 import { useWishlist } from "../../../context/WishlistContext";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import * as Location from 'expo-location';
-import { LinearGradient } from 'expo-linear-gradient';
+import { API_URL } from "../../../utils/api";
+import { getToken } from "../../../utils/auth";
 
 const { width } = Dimensions.get("window");
 

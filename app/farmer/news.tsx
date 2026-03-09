@@ -5,7 +5,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Image,
-  Linking,
+  Linking, // Used to open external URLs
   RefreshControl,
   ScrollView,
   Share,
@@ -26,7 +26,6 @@ export default function FarmerNews() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedNews, setSelectedNews] = useState<any>(null);
   
-  // New States for Search and Filter
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
 
@@ -46,14 +45,9 @@ export default function FarmerNews() {
 
   useEffect(() => { fetchData(); }, []);
 
-  // Filter Logic
   const filteredMandi = data?.mandi?.filter((item: any) => {
     const matchesSearch = item.crop.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    // Note: This logic assumes you add a 'category' field to your backend objects 
-    // If category isn't in backend yet, it will just show everything for "All"
     const matchesCategory = activeCategory === "All" || item.category === activeCategory.toLowerCase();
-    
     return matchesSearch && matchesCategory;
   });
 
@@ -73,7 +67,10 @@ export default function FarmerNews() {
         <Text style={styles.headerTitle}>Kisan Samachar</Text>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => {setRefreshing(true); fetchData();}} />}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => {setRefreshing(true); fetchData();}} />}
+      >
         
         {/* 🔍 SEARCH BAR */}
         <View style={styles.searchContainer}>
@@ -81,6 +78,7 @@ export default function FarmerNews() {
           <TextInput 
             style={styles.searchInput}
             placeholder="Search crop (e.g. Tomato, Wheat)..."
+            placeholderTextColor="#64748B"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -136,23 +134,34 @@ export default function FarmerNews() {
           ))}
         </ScrollView>
 
-        {/* 📰 NEWS SECTION */}
+        {/* 📰 NEWS SECTION (Clickable Cards) */}
         <Text style={styles.sectionTitle}>Aaj ki Badi Khabar 📰</Text>
         {data?.news?.map((item: any) => (
-          <TouchableOpacity key={item.id} style={styles.newsCard} onPress={() => setSelectedNews(item)}>
+          <TouchableOpacity 
+            key={item.id} 
+            style={styles.newsCard} 
+            onPress={() => item.url && Linking.openURL(item.url)} // Opens the news link
+          >
             <Image source={{ uri: item.image }} style={styles.newsImg} />
             <View style={styles.newsInfo}>
               <View style={styles.newsRow}>
                 <Text style={styles.sourceText}>{item.source}</Text>
-                <Ionicons name="share-social-outline" size={18} color="#10B981" onPress={() => onShare(item.title, item.url)} />
+                <Ionicons 
+                  name="share-social-outline" 
+                  size={18} 
+                  color="#10B981" 
+                  onPress={() => onShare(item.title, item.url)} 
+                />
               </View>
               <Text style={styles.newsTitle} numberOfLines={2}>{item.title}</Text>
+              {/* Tap hint for farmers */}
+              <Text style={styles.readMoreText}>Puri khabar padhne ke liye tap karein...</Text>
             </View>
           </TouchableOpacity>
         ))}
+        {/* Extra padding for bottom scroll */}
+        <View style={{ height: 40 }} />
       </ScrollView>
-
-      {/* Detail Modal code remains the same... */}
     </SafeAreaView>
   );
 }
@@ -164,11 +173,9 @@ const styles = StyleSheet.create({
   backBtn: { padding: 8, backgroundColor: '#F1F5F9', borderRadius: 12 },
   headerTitle: { fontSize: 20, fontWeight: '900', color: '#064E3B', marginLeft: 15 },
   
-  // Search Bar Styles
   searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 20, borderRadius: 15, borderWidth: 1, borderColor: '#E2E8F0' },
   searchInput: { flex: 1, paddingVertical: 12, paddingHorizontal: 10, fontSize: 16, color: '#1E293B' },
   
-  // Category Styles
   categoryScroll: { paddingLeft: 20, marginBottom: 10 },
   categoryBtn: { paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20, backgroundColor: '#fff', marginRight: 10, borderWidth: 1, borderColor: '#E2E8F0' },
   activeCategoryBtn: { backgroundColor: '#10B981', borderColor: '#10B981' },
@@ -197,5 +204,6 @@ const styles = StyleSheet.create({
   newsInfo: { padding: 15 },
   newsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
   sourceText: { color: '#10B981', fontWeight: 'bold', fontSize: 12 },
-  newsTitle: { fontSize: 16, fontWeight: '800', color: '#1E293B' }
+  newsTitle: { fontSize: 16, fontWeight: '800', color: '#1E293B' },
+  readMoreText: { fontSize: 11, color: '#94A3B8', marginTop: 8, fontStyle: 'italic' }
 });
