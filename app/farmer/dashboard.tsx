@@ -43,9 +43,7 @@ export default function FarmerDashboard() {
     totalOrders: 0
   });
 
-  // ✨ UPGRADED ANALYSIS LOGIC
   const processedSalesData = useMemo(() => {
-    // 1. Initialize data with ALL farmer products (so they show even with 0 sales)
     const analysisMap: { [key: string]: any } = {};
     
     myProducts.forEach(p => {
@@ -60,7 +58,6 @@ export default function FarmerDashboard() {
       };
     });
 
-    // 2. Add sales data ONLY from DELIVERED orders
     allOrders.forEach(order => {
       if (order.orderStatus === "Delivered") {
         order.items.forEach((item: any) => {
@@ -114,7 +111,6 @@ export default function FarmerDashboard() {
       const filteredProducts = prodRes.data.filter((p: any) => p.farmerId?._id === decoded?.id || p.farmerId === decoded?.id);
       setMyProducts(filteredProducts);
 
-      // ✨ Earnings calculation updated: Sum only DELIVERED orders
       const deliveredEarnings = orders
         .filter((o: any) => o.orderStatus === "Delivered")
         .reduce((acc: number, curr: any) => acc + (curr.totalAmount || 0), 0);
@@ -231,12 +227,12 @@ export default function FarmerDashboard() {
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.actionRow}>
             <ActionBtn label="Add Crop" icon="add" color="#10B981" onPress={() => router.push("/farmer/add-product")} />
+            <ActionBtn label="Live News" icon="newspaper-outline" color="#3B82F6" onPress={() => router.push("/farmer/news" as any)} />
             <ActionBtn label="Orders" icon="list" color="#F59E0B" onPress={() => router.push("/farmer/orders" as any)} />
         </View>
 
         <Text style={styles.sectionTitle}>Sales Momentum & Analysis</Text>
         
-        {/* ✨ DUAL ANALYSIS CARDS */}
         {myProducts.length > 0 ? (
             <>
                 <AnalysisBarChart 
@@ -261,7 +257,6 @@ export default function FarmerDashboard() {
         )}
       </ScrollView>
 
-      {/* Inventory Modal */}
       <Modal visible={inventoryVisible} animationType="slide">
         <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
             <View style={styles.modalHeader}><TouchableOpacity onPress={() => setInventoryVisible(false)} style={styles.closeBtn}><Ionicons name="close" size={28} color="#1F2937" /></TouchableOpacity><Text style={styles.modalTitle}>Stock Inventory</Text></View>
@@ -289,6 +284,7 @@ export default function FarmerDashboard() {
 
       <View style={styles.bottomNav}>
         <NavIcon icon="home" label="Home" active />
+        <NavIcon icon="newspaper-outline" label="News" onPress={() => router.push("/farmer/news" as any)} />
         <NavIcon icon="cube-outline" label="My Crops" onPress={() => setInventoryVisible(true)} />
         <NavIcon icon="chatbubbles-outline" label="AI Help" onPress={() => router.push("/farmer/chat")} />
         <NavIcon icon="person-outline" label="Profile" onPress={() => router.push("/farmer/profile")} />
@@ -338,11 +334,9 @@ const styles = StyleSheet.create({
   statVal: { fontSize: 22, fontWeight: "900", color: "#1F2937" },
   statLab: { color: "#6B7280", fontSize: 12, fontWeight: "700" },
   sectionTitle: { fontSize: 19, fontWeight: "800", marginTop: 25, marginBottom: 15, color: "#374151" },
-  actionRow: { flexDirection: "row", gap: 15 },
+  actionRow: { flexDirection: "row", gap: 10, justifyContent: 'space-between' },
   bigBtn: { flex: 1, height: 95, borderRadius: 22, justifyContent: 'center', alignItems: 'center', elevation: 6 },
   btnLab: { color: "white", fontWeight: "800", marginTop: 8 },
-  
-  // Analysis & Chart Styles
   analysisCard: { backgroundColor: '#fff', borderRadius: 30, padding: 20, elevation: 8, borderWidth: 1, borderColor: '#F1F5F9' },
   insightHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
   insightTitle: { fontSize: 16, fontWeight: '900', color: '#1E293B' },
@@ -357,13 +351,11 @@ const styles = StyleSheet.create({
   barFill: { width: '100%', borderRadius: 4 },
   barLabel: { fontSize: 10, fontWeight: '800', color: '#334155', marginTop: 8, textAlign: 'center' },
   soldQtyLabel: { fontSize: 8, color: '#94A3B8', fontWeight: '700' },
-  
   emptyChart: { paddingVertical: 40, alignItems: 'center', backgroundColor: '#fff', borderRadius: 30 },
   emptyChartText: { color: '#94A3B8', fontSize: 14, fontWeight: '700', marginTop: 10 },
-  
   bottomNav: { position: 'absolute', bottom: 0, width: '100%', height: 75, backgroundColor: 'white', flexDirection: 'row', borderTopWidth: 1, borderColor: '#F1F5F9', paddingBottom: 10 },
   navItem: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  navLab: { fontSize: 10, color: "#94A3B8", marginTop: 4, fontWeight: '700' },
+  navLab: { fontSize: 9, color: "#94A3B8", marginTop: 4, fontWeight: '700' },
   modalHeader: { padding: 20, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: '#F1F5F9' },
   closeBtn: { padding: 8, backgroundColor: '#F9FAFB', borderRadius: 12 },
   modalTitle: { fontSize: 20, fontWeight: '900', color: '#1F2937', marginLeft: 15 },
