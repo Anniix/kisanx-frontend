@@ -85,7 +85,7 @@ export default function ForgotPassword() {
                 </View>
                 <View style={styles.inputWrapper}>
                   <Ionicons name={method === "email" ? "mail-outline" : "call-outline"} size={20} color="#16A34A" style={styles.icon} />
-                  <TextInput placeholder={method === "email" ? "Email" : "Phone"} style={styles.input} value={form.identifier} onChangeText={(t) => setForm({ ...form, identifier: t })} />
+                  <TextInput placeholder={method === "email" ? "Email" : "Phone"} placeholderTextColor="#64748B" style={styles.input} value={form.identifier} onChangeText={(t) => setForm({ ...form, identifier: t })} />
                 </View>
                 <TouchableOpacity style={styles.mainBtn} onPress={handleSendOTP} disabled={loading}><Text style={styles.btnText}>Send OTP</Text></TouchableOpacity>
               </View>

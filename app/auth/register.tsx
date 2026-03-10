@@ -146,7 +146,7 @@ export default function Register() {
                 
                 <View style={[styles.inputWrapper, focusedField === "email" && styles.focusedInput]}>
                   <Ionicons name="mail" size={20} color={focusedField === "email" ? "#10B981" : "#94A3B8"} style={styles.icon} />
-                  <TextInput placeholder="Email Address" style={styles.input} editable={!isVerified} onChangeText={(t)=>update("email",t)} autoCapitalize="none" />
+                  <TextInput placeholder="Email Address" placeholderTextColor="#64748B" style={styles.input} editable={!isVerified} onChangeText={(t)=>update("email",t)} autoCapitalize="none" />
                   {!isVerified && (
                     <TouchableOpacity style={styles.verifyBtn} onPress={handleSendOTP} disabled={loading}>
                       <Text style={styles.verifyBtnText}>{otpSent ? "Resend" : "Get OTP"}</Text>
