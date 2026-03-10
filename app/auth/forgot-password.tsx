@@ -93,13 +93,13 @@ export default function ForgotPassword() {
               <View style={styles.inputGroup}>
                 <View style={styles.inputWrapper}>
                   <Ionicons name="keypad-outline" size={20} color="#16A34A" style={styles.icon} />
-                  <TextInput placeholder="6-Digit OTP" style={styles.input} keyboardType="numeric" value={form.otp} onChangeText={(t) => setForm({ ...form, otp: t })} />
+                  <TextInput placeholder="6-Digit OTP" style={styles.input} placeholderTextColor="#64748B" keyboardType="numeric" value={form.otp} onChangeText={(t) => setForm({ ...form, otp: t })} />
                 </View>
                 
                 {/* New Password Fields with Toggles */}
                 <View style={styles.inputWrapper}>
                   <Ionicons name="lock-closed-outline" size={20} color="#16A34A" style={styles.icon} />
-                  <TextInput placeholder="New Password" style={styles.input} secureTextEntry={!showPassword} value={form.newPassword} onChangeText={(t) => setForm({ ...form, newPassword: t })} />
+                  <TextInput placeholder="New Password" placeholderTextColor="#64748B" style={styles.input} secureTextEntry={!showPassword} value={form.newPassword} onChangeText={(t) => setForm({ ...form, newPassword: t })} />
                   <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ paddingRight: 15 }}>
                     <Ionicons name={showPassword ? "eye-off" : "eye"} size={20} color="#94A3B8" />
                   </TouchableOpacity>
@@ -107,7 +107,7 @@ export default function ForgotPassword() {
 
                 <View style={styles.inputWrapper}>
                   <Ionicons name="shield-checkmark-outline" size={20} color="#16A34A" style={styles.icon} />
-                  <TextInput placeholder="Confirm" style={styles.input} secureTextEntry={!showPassword} value={form.confirmPassword} onChangeText={(t) => setForm({ ...form, confirmPassword: t })} />
+                  <TextInput placeholder="Confirm" placeholderTextColor="#64748B" style={styles.input} secureTextEntry={!showPassword} value={form.confirmPassword} onChangeText={(t) => setForm({ ...form, confirmPassword: t })} />
                   <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ paddingRight: 15 }}>
                     <Ionicons name={showPassword ? "eye-off" : "eye"} size={20} color="#94A3B8" />
                   </TouchableOpacity>

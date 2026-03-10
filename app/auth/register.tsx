@@ -158,7 +158,7 @@ export default function Register() {
                 {otpSent && !isVerified && (
                   <View style={[styles.inputWrapper, {borderColor: '#10B981'}]}>
                     <Ionicons name="keypad" size={20} color="#10B981" style={styles.icon} />
-                    <TextInput placeholder="Enter OTP" style={styles.input} keyboardType="numeric" onChangeText={setOtp} maxLength={6} />
+                    <TextInput placeholder="Enter OTP" placeholderTextColor="#64748B" style={styles.input} keyboardType="numeric" onChangeText={setOtp} maxLength={6} />
                     <TouchableOpacity style={styles.verifyBtn} onPress={handleVerifyOTP}><Text style={styles.verifyBtnText}>Verify</Text></TouchableOpacity>
                   </View>
                 )}
