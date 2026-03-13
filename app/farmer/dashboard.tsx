@@ -15,6 +15,7 @@ import {
   Platform,
   Modal,
   FlatList,
+  TextInput,
   StatusBar as RNStatusBar,
   Dimensions,
   Alert
@@ -33,6 +34,7 @@ export default function FarmerDashboard() {
   const [loading, setLoading] = useState(true);
   const [address, setAddress] = useState("Fetching location...");
   const [inventoryVisible, setInventoryVisible] = useState(false);
+  const [inventorySearch, setInventorySearch] = useState("");
   const [myProducts, setMyProducts] = useState<any[]>([]);
   const [allOrders, setAllOrders] = useState<any[]>([]);
 
@@ -170,7 +172,7 @@ export default function FarmerDashboard() {
           </View>
         </View>
 
-        <View style={styles.chartContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chartContainer}>
           {data.map((item: any, index: number) => (
             <View key={index} style={styles.barWrapper}>
               <View style={styles.barInfoTop}>
@@ -183,7 +185,7 @@ export default function FarmerDashboard() {
               <Text style={styles.soldQtyLabel}>{item.soldQty} Sold</Text>
             </View>
           ))}
-        </View>
+        </ScrollView>
       </View>
     );
   };
@@ -220,7 +222,7 @@ export default function FarmerDashboard() {
             <Text style={styles.statVal}>{stats.totalProducts}</Text><Text style={styles.statLab}>My Crops</Text>
           </TouchableOpacity>
           <View style={[styles.statCard, { backgroundColor: '#FFFBEB' }]}><View style={[styles.statIconBox, { backgroundColor: '#FEF3C7' }]}><Ionicons name="cart-outline" size={22} color="#F59E0B" /></View><Text style={styles.statVal}>{stats.pendingOrders}</Text><Text style={styles.statLab}>Pending</Text></View>
-          <View style={[styles.statCard, { backgroundColor: '#EFF6FF' }]}><View style={[styles.statIconBox, { backgroundColor: '#DBEAFE' }]}><Ionicons name="wallet-outline" size={22} color="#3B82F6" /></View><Text style={styles.statVal}>₹{stats.earnings}</Text><Text style={styles.statLab}>Earnings</Text></View>
+          <TouchableOpacity style={[styles.statCard, { backgroundColor: '#EFF6FF' }]} onPress={() => router.push("/farmer/earnings" as any)}><View style={[styles.statIconBox, { backgroundColor: '#DBEAFE' }]}><Ionicons name="wallet-outline" size={22} color="#3B82F6" /></View><Text style={styles.statVal}>₹{stats.earnings}</Text><Text style={styles.statLab}>Earnings</Text></TouchableOpacity>
           <View style={[styles.statCard, { backgroundColor: '#F5F3FF' }]}><View style={[styles.statIconBox, { backgroundColor: '#EDE9FE' }]}><Ionicons name="stats-chart-outline" size={22} color="#8B5CF6" /></View><Text style={styles.statVal}>{stats.totalOrders}</Text><Text style={styles.statLab}>Orders</Text></View>
         </View>
 
@@ -259,9 +261,24 @@ export default function FarmerDashboard() {
 
       <Modal visible={inventoryVisible} animationType="slide">
         <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-            <View style={styles.modalHeader}><TouchableOpacity onPress={() => setInventoryVisible(false)} style={styles.closeBtn}><Ionicons name="close" size={28} color="#1F2937" /></TouchableOpacity><Text style={styles.modalTitle}>Stock Inventory</Text></View>
+            <View style={styles.modalHeader}><TouchableOpacity onPress={() => { setInventoryVisible(false); setInventorySearch(""); }} style={styles.closeBtn}><Ionicons name="close" size={28} color="#1F2937" /></TouchableOpacity><Text style={styles.modalTitle}>Stock Inventory</Text></View>
+            <View style={styles.searchContainer}>
+              <Ionicons name="search-outline" size={18} color="#94A3B8" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search your crops..."
+                placeholderTextColor="#94A3B8"
+                value={inventorySearch}
+                onChangeText={setInventorySearch}
+              />
+              {inventorySearch.length > 0 && (
+                <TouchableOpacity onPress={() => setInventorySearch("")}>
+                  <Ionicons name="close-circle" size={18} color="#94A3B8" />
+                </TouchableOpacity>
+              )}
+            </View>
             <FlatList
-                data={myProducts}
+                data={myProducts.filter(p => p.name.toLowerCase().includes(inventorySearch.toLowerCase()))}
                 keyExtractor={(item) => item._id}
                 contentContainerStyle={{ padding: 20 }}
                 renderItem={({ item }) => (
@@ -343,11 +360,11 @@ const styles = StyleSheet.create({
   insightSub: { fontSize: 11, color: '#64748B', fontWeight: '600', marginTop: 2 },
   unitBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
   unitBadgeText: { fontSize: 10, fontWeight: '800' },
-  chartContainer: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'flex-start', height: 160, gap: 12 },
-  barWrapper: { alignItems: 'center', width: 60 },
+  chartContainer: { flexDirection: 'row', alignItems: 'flex-end', height: 160, gap: 8, paddingBottom: 4, paddingHorizontal: 4 },
+  barWrapper: { alignItems: 'center', width: 55 },
   barInfoTop: { marginBottom: 5 },
   barValueText: { fontSize: 10, fontWeight: '900' },
-  barTrack: { height: 90, width: 22, backgroundColor: '#F8FAFC', borderRadius: 8, justifyContent: 'flex-end', overflow: 'hidden', borderWidth: 1, borderColor: '#F1F5F9' },
+  barTrack: { height: 90, width: 20, backgroundColor: '#F8FAFC', borderRadius: 8, justifyContent: 'flex-end', overflow: 'hidden', borderWidth: 1, borderColor: '#F1F5F9' },
   barFill: { width: '100%', borderRadius: 4 },
   barLabel: { fontSize: 10, fontWeight: '800', color: '#334155', marginTop: 8, textAlign: 'center' },
   soldQtyLabel: { fontSize: 8, color: '#94A3B8', fontWeight: '700' },
@@ -362,5 +379,8 @@ const styles = StyleSheet.create({
   invCard: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 20, padding: 15, marginBottom: 15, borderWidth: 1, borderColor: '#F1F5F9', elevation: 2 },
   invImg: { width: 70, height: 70, borderRadius: 15 },
   invName: { fontSize: 17, fontWeight: '800', color: '#1F2937' },
-  stockValue: { fontSize: 15, fontWeight: '700', color: '#10B981', marginTop: 4 }
+  stockValue: { fontSize: 15, fontWeight: '700', color: '#10B981', marginTop: 4 },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 20, marginVertical: 12, backgroundColor: '#F8FAFC', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: '#F1F5F9' },
+  searchIcon: { marginRight: 8 },
+  searchInput: { flex: 1, fontSize: 14, fontWeight: '600', color: '#1F2937', padding: 0 },
 });
